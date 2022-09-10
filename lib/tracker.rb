@@ -9,6 +9,7 @@ class Tracker
     @browser = Ferrum::Browser.new
     @browser.headers.set('User-Agent' => USER_AGENT)
     @logger = logger
+    @notifier = -> {} # init as a NullObject proc in case notifier isn't injected
   end
 
   def notify(&block)
