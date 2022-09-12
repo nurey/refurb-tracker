@@ -6,8 +6,7 @@ class Tracker
   THRESHOLD_PRICE = 700
 
   def initialize(logger:)
-    @browser = Ferrum::Browser.new
-    @browser.headers.set('User-Agent' => USER_AGENT)
+    @browser = _init_browser
     @logger = logger
     @notifier = -> {} # init as a NullObject proc in case notifier isn't injected
   end
@@ -19,6 +18,8 @@ class Tracker
   def run
     @browser.go_to(REFURB_URL)
     @logger.info("Browser received status #{@browser.network.status}")
+    return _handle_network_error if @browser.network.status != 200
+
     prices = @browser.css('.as-price-currentprice')
       .map { |node| node.text.strip.gsub(/[$,]/, '').to_i }
 
@@ -29,5 +30,21 @@ class Tracker
     @notifier.call("Found items below $#{THRESHOLD_PRICE}", REFURB_URL) if low_prices.any?
 
     @browser.reset
+  end
+
+  private
+
+  def _init_browser
+    Ferrum::Browser.new.tap do |b|
+      b.headers.set('User-Agent' => USER_AGENT)
+    end
+  end
+
+  def _handle_network_error
+    @browser.screenshot(path: 'browser_screenshot.png')
+
+    @browser.quit
+
+    @browser = _init_browser
   end
 end
